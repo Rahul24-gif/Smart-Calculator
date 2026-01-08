@@ -1,0 +1,2683 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Smart Calculator Ultimate</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&family=Roboto+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- XLSX Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- PWA Support -->
+  <link rel="manifest" href="manifest.json">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('Service Worker Registered'));
+    }
+  </script>
+
+  <style>
+    /* --- CSS VARIABLES (From your styles.css) --- */
+    :root {
+      /* --- LIGHT THEME (Glassmorphism) --- */
+      --bg-overlay: rgba(255, 255, 255, 0.4);
+      --glass-bg: rgba(255, 255, 255, 0.25);
+      --glass-border: rgba(255, 255, 255, 0.3);
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --primary-grad: linear-gradient(135deg, #4f46e5, #3b82f6);
+      --primary-glow: rgba(79, 70, 229, 0.4);
+      --secondary-grad: linear-gradient(135deg, #ec4899, #db2777);
+      --btn-bg: rgba(255, 255, 255, 0.3);
+      --btn-hover: rgba(255, 255, 255, 0.5);
+      --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+      --display-bg: rgba(255, 255, 255, 0.15);
+      /* Reduced Dimensions for Compact Fit */
+      --container-padding: 20px;
+      --btn-padding: 12px;
+      --gap-size: 10px;
+      --radius-main: 24px;
+      --radius-btn: 16px;
+    }
+
+    body.dark-mode {
+      /* --- DARK THEME (Neon Glass) --- */
+      --bg-overlay: rgba(0, 0, 0, 0.6);
+      --glass-bg: rgba(15, 23, 42, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --btn-bg: rgba(255, 255, 255, 0.03);
+      --btn-hover: rgba(255, 255, 255, 0.1);
+      --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+      --display-bg: rgba(0, 0, 0, 0.2);
+      --primary-glow: rgba(99, 102, 241, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* REMOVE NUMBER SPINNERS */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      appearance: none;
+      /* Fix lint */
+      margin: 0;
+    }
+
+    input[type=number] {
+      -moz-appearance: textfield;
+      appearance: textfield;
+      /* Fix lint */
+    }
+
+    /* ... (body styles) ... */
+
+    /* Cash Inputs Refinement */
+    .cash-input-total input {
+      grid-column: 1;
+      margin-left: 10%;
+      width: 120px;
+      padding: 6px 10px;
+      /* Smaller than global */
+      text-align: center;
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.05);
+      /* Ensure glass */
+      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+    }
+
+    .cash-input-total input:focus {
+      border-color: rgba(99, 102, 241, 0.5);
+      box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background-color: #0f172a;
+      /* Use a deep gradient background */
+      background-image:
+        radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
+        radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 1) 0, transparent 50%),
+        radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
+      font-family: 'Poppins', sans-serif;
+      position: relative;
+      overflow-x: hidden;
+      color: var(--text-main);
+      transition: color 0.3s ease;
+    }
+
+    @keyframes pulse-red {
+      0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+      }
+
+      70% {
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+      }
+    }
+
+    .pulse-anim {
+      animation: pulse-red 1.5s infinite;
+    }
+
+    /* Blur colourful blobs layer */
+    .bg-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      overflow: hidden;
+    }
+
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.4;
+      animation: float 10s infinite ease-in-out;
+    }
+
+    .blob-1 {
+      top: -10%;
+      left: -10%;
+      width: 50vw;
+      height: 50vw;
+      background: #6366f1;
+      animation-delay: 0s;
+    }
+
+    .blob-2 {
+      bottom: -10%;
+      right: -10%;
+      width: 50vw;
+      height: 50vw;
+      background: #ec4899;
+      animation-delay: -5s;
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translate(0, 0);
+      }
+
+      50% {
+        transform: translate(30px, 50px);
+      }
+    }
+
+    #background-video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -1;
+      filter: blur(4px);
+      transform: scale(1.1);
+    }
+
+    .fixed-toggles {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 100;
+    }
+
+    .theme-toggle {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      padding: 10px 18px;
+      border-radius: 50px;
+      cursor: pointer;
+      color: var(--text-main);
+      font-weight: 500;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: var(--shadow);
+      transition: all 0.3s;
+      font-size: 0.9rem;
+    }
+
+    .theme-toggle:hover {
+      background: var(--btn-hover);
+      transform: translateY(-2px);
+    }
+
+    .theme-toggle:active {
+      transform: scale(0.95);
+    }
+
+    /* --- GLOBAL GLASS INPUTS & SELECTS --- */
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    select,
+    .form-input,
+    .unit-select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border);
+      color: var(--text-main);
+      padding: 10px 15px;
+      border-radius: 12px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 1rem;
+      outline: none;
+      transition: all 0.3s ease;
+      width: 100%;
+      box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    input[type="date"]:focus,
+    select:focus,
+    .form-input:focus,
+    .unit-select:focus {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(99, 102, 241, 0.5);
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+    }
+
+    /* Custom Scrollbar for all scrollable areas */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(156, 163, 175, 0.5);
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(99, 102, 241, 0.7);
+    }
+
+    /* Option styling for Select dropdowns */
+    option {
+      background: #1f2937;
+      color: #fff;
+    }
+
+    body:not(.dark-mode) option {
+      background: #fff;
+      color: #333;
+    }
+
+    .main-container {
+      display: flex;
+      gap: 20px;
+      padding: 10px;
+      align-items: flex-start;
+      justify-content: center;
+      max-width: 1000px;
+      width: 100%;
+      margin: 20px auto 10px;
+    }
+
+    .container {
+      background: var(--glass-bg);
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius-main);
+      padding: var(--container-padding);
+      width: 100%;
+      max-width: 550px;
+      /* FIXED: Allow height to adapt to content - prevents squashing on zoom */
+      height: auto;
+      min-height: 600px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: visible;
+      /* Allow content to dictate size */
+    }
+
+    /* ... */
+
+    .calculator-wrapper {
+      flex: 1;
+      width: 100%;
+      display: flex;
+    }
+
+    .calculator {
+      gap: 5px;
+      height: 100%;
+    }
+
+    /* Force buttons to fit exactly within the remaining space */
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      /* FIXED: Enforce minimum height so buttons never squash */
+      grid-template-rows: repeat(5, minmax(48px, 1fr));
+      gap: 10px;
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    .buttons button {
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      /* Enforce minimum height */
+      min-height: 48px;
+      border: 1px solid var(--glass-border);
+      background: var(--btn-bg);
+      color: var(--text-main);
+      font-size: clamp(1rem, 3vh, 1.4rem);
+      border-radius: 14px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .history-panel {
+      flex: 0 0 280px;
+      height: 500px;
+      /* Reduced height */
+      background: var(--glass-bg);
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-main);
+      padding: var(--container-padding);
+      box-shadow: var(--shadow);
+      overflow-y: auto;
+    }
+
+    .calculator-wrapper {
+      flex: 0 0 550px;
+      max-width: 550px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+
+
+    @media (max-width: 900px) {
+      .main-container {
+        flex-direction: column;
+        align-items: center;
+        margin-top: 50px;
+      }
+
+      .calculator-wrapper {
+        flex: 0 0 auto;
+        width: 100%;
+        max-width: 550px;
+      }
+
+      .history-panel {
+        width: 100%;
+        max-width: 550px;
+        height: 300px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .main-container {
+        padding: 10px;
+        margin-top: 10px;
+        gap: 15px;
+      }
+
+      .container {
+        padding: 20px;
+        border-radius: 25px;
+      }
+
+      :root {
+        --btn-padding: 16px;
+        --gap-size: 12px;
+      }
+
+      .display {
+        height: 100px;
+        font-size: 2.2rem;
+      }
+    }
+
+    /* --- NAV DOCK (New Top Bar) --- */
+    .nav-dock {
+      width: 100%;
+      max-width: 550px;
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 5px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 6px;
+      border-radius: 16px;
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      flex-wrap: wrap;
+      justify-content: center;
+      width: auto;
+      /* Allow fit content */
+      margin-bottom: 0;
+    }
+
+    .tabs button {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      border-radius: 10px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+      white-space: nowrap;
+      flex: 0 1 auto;
+      /* Don't force equal width */
+    }
+
+
+
+    .tabs button.active {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+
+    .display {
+      background: var(--display-bg);
+      color: var(--text-main);
+      /* FIXED: Dynamic height based on viewport to look professional on all screens */
+      height: min(150px, 25vh);
+      min-height: 120px;
+      width: 100%;
+      max-width: 100%;
+      border: none;
+      border-radius: 16px;
+      margin-bottom: 20px;
+      padding: 20px;
+      text-align: right;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      /* Responsive font */
+      font-family: 'Roboto Mono', monospace;
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
+      cursor: text;
+      caret-color: var(--text-main);
+      resize: none;
+      overflow-y: auto;
+      overflow-x: hidden;
+      word-break: break-all;
+      white-space: pre-wrap;
+      line-height: 1.2;
+    }
+
+    .display:focus {
+      outline: 2px solid rgba(99, 102, 241, 0.5);
+    }
+
+    /* Sleek Scrollbar Styling for Display */
+    .display::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .display::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .display::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 10px;
+    }
+
+    body.dark-mode .display::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .display::-webkit-scrollbar-thumb:hover {
+      background: rgba(99, 102, 241, 0.5);
+    }
+
+
+
+    .buttons button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .memory-buttons button {
+      padding: 0;
+      height: 45px;
+      border: 1px solid var(--glass-border);
+      background: rgba(255, 255, 255, 0.05);
+      /* Lighter glass */
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      font-weight: 600;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .memory-buttons button:hover {
+      background: var(--btn-hover);
+      color: var(--text-main);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    @media (max-height: 700px) {
+      .buttons button {
+        aspect-ratio: auto;
+        padding: 12px 0;
+      }
+    }
+
+    .buttons button:active {
+      transform: scale(0.92);
+      background: var(--btn-hover);
+    }
+
+    .btn-clear {
+      color: #ef4444 !important;
+      background: rgba(239, 68, 68, 0.15) !important;
+    }
+
+    .btn-equal {
+      grid-column: span 1;
+      background: var(--primary-grad) !important;
+      color: white !important;
+      border: none !important;
+    }
+
+    .buttons button[onclick*="press('+')"],
+    .buttons button[onclick*="press('-')"],
+    .buttons button[onclick*="press('*')"],
+    .buttons button[onclick*="press('/')"] {
+      color: #6366f1;
+      background: rgba(99, 102, 241, 0.1);
+    }
+
+    body.dark-mode .buttons button[onclick*="press('+')"],
+    body.dark-mode .buttons button[onclick*="press('-')"],
+    body.dark-mode .buttons button[onclick*="press('*')"],
+    body.dark-mode .buttons button[onclick*="press('/')"] {
+      color: #818cf8;
+    }
+
+
+
+    /* CONTENT PANELS */
+    .calculator,
+    .cash-calculator,
+    .loan-calculator,
+    .unit-converter {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      /* Hide scrollbars, force fit */
+      justify-content: space-between;
+      /* Space out elements */
+    }
+
+    /* SPECIFIC STANDARD MODE FLEX FIXES */
+    .calculator {
+      gap: 5px;
+      /* Minimal gap */
+    }
+
+    /* Shrink non-essential vertical space if needed */
+    .memory-buttons,
+    .voice-control-container,
+    .gst-controls {
+      flex-shrink: 0;
+      /* Keep these readable size */
+      margin-top: 5px;
+      margin-bottom: 5px;
+    }
+
+    /* Allow keypad to dominate space but shrink buttons if needed */
+    .buttons {
+      flex-grow: 1;
+      min-height: 0;
+      /* Important for grid within flex */
+      margin-bottom: 0;
+    }
+
+    .buttons button {
+      /* Let buttons squash down if absolutely necessary */
+      min-height: 40px;
+    }
+
+    .calculator.active,
+    .cash-calculator.active,
+    .loan-calculator.active,
+    .unit-converter.active {
+      display: flex;
+    }
+
+
+
+    /* CASH STYLES - Reverted to Flex */
+    .cash-table {
+      overflow-y: auto;
+      padding-right: 5px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .cash-row {
+      display: flex;
+      /* Flexbox is back */
+      align-items: center;
+      gap: 5px;
+      /* Reduced gap to align inputs more to the left */
+      margin-bottom: 0;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 6px 15px;
+      border-radius: 12px;
+      min-height: 50px;
+    }
+
+    .cash-row label {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1rem;
+      white-space: nowrap;
+      width: 70px;
+      /* Fixed Width for perfect vertical alignment */
+      justify-content: flex-start;
+    }
+
+    .cash-input-total {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      /* Reduced internal gap too */
+    }
+
+    .cash-input-total input {
+      flex: 1;
+      /* Ensure at least 9 digits fit comfortably */
+      min-width: 100px;
+      /* Input styling inherits global */
+    }
+
+    .note-total {
+      width: 90px;
+      /* Fixed Width for totals alignment */
+      text-align: right;
+      font-weight: 600;
+      color: var(--text-main);
+      font-size: 1rem;
+    }
+
+    /* DATE MODE STYLES */
+    .date-mode-content {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding: 10px;
+      height: 100%;
+      justify-content: center;
+      /* Center vertically specifically for Date mode */
+    }
+
+    .date-mode-content .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .date-mode-content label {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-left: 5px;
+    }
+
+    .result-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+
+
+
+    .note-total {
+      grid-column: 3;
+      justify-self: end;
+      text-align: right;
+      font-weight: 600;
+      opacity: 0.9;
+      font-size: 1rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: 100%;
+    }
+
+    #cashTotal {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      font-size: 1.2rem;
+      font-weight: 700;
+      padding: 8px;
+      margin: 6px 0;
+      /* Reduced margin/padding */
+      background: var(--primary-grad);
+      color: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+      flex-shrink: 0;
+      min-height: 45px;
+    }
+
+    .cash-actions {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 6px;
+      flex-shrink: 0;
+    }
+
+    .cash-actions button {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      font-size: 0.85rem;
+    }
+
+    .cash-actions button:nth-child(1) {
+      background: rgba(16, 185, 129, 0.8);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .cash-actions button:nth-child(1):hover {
+      background: rgba(16, 185, 129, 1);
+    }
+
+    .cash-actions button:nth-child(2) {
+      background: rgba(59, 130, 246, 0.8);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+    }
+
+    .cash-actions button:nth-child(2):hover {
+      background: rgba(59, 130, 246, 1);
+    }
+
+    .cash-actions button:nth-child(3) {
+      background: rgba(239, 68, 68, 0.8);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    .cash-actions button:nth-child(3):hover {
+      background: rgba(239, 68, 68, 1);
+    }
+
+    .currency-converter {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      padding-top: 6px;
+      border-top: 1px solid var(--glass-border);
+      flex-shrink: 0;
+      flex-wrap: nowrap;
+    }
+
+    .currency-converter label {
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
+
+    .currency-converter select {
+      padding: 4px;
+      border-radius: 6px;
+      border: 1px solid var(--glass-border);
+      background: var(--glass-bg);
+      color: var(--text-main);
+      flex-grow: 1;
+      font-size: 0.85rem;
+    }
+
+    .currency-converter button {
+      padding: 6px 14px;
+      background: var(--primary-grad);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      box-shadow: 0 2px 5px rgba(99, 102, 241, 0.3);
+      transition: all 0.3s;
+    }
+
+    .currency-converter button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(99, 102, 241, 0.4);
+    }
+
+    #convertedTotal {
+      display: none;
+      position: absolute;
+      background: #333;
+      color: #fff;
+      padding: 5px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+
+    .currency-converter:hover #convertedTotal {
+      display: block;
+      bottom: 40px;
+      right: 20px;
+    }
+
+    /* --- LOAN & UNIT STYLES (Added to match theme) --- */
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      /* Match global glass */
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      color: var(--text-main);
+      font-family: 'Roboto Mono', monospace;
+      font-size: 1rem;
+      transition: all 0.3s;
+    }
+
+    .form-input:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+
+    /* Loan actions container */
+    .loan-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .btn-calculate-loan {
+      flex: 2;
+      padding: 12px;
+      background: var(--primary-grad);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 1rem;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+      transition: all 0.3s;
+    }
+
+    .btn-calculate-loan:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn-clear-loan {
+      max-width: 150px;
+      margin-left: auto;
+      padding: 12px;
+      background: var(--secondary-grad);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 1rem;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+      transition: all 0.3s;
+    }
+
+    .btn-clear-loan:hover {
+      transform: translateY(-2px);
+    }
+
+
+    .results-box {
+      margin-top: 15px;
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 12px;
+      padding: 15px;
+    }
+
+    .result-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+      padding-bottom: 6px;
+      border-bottom: 1px dashed var(--glass-border);
+    }
+
+    .result-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      font-weight: 700;
+      color: #6366f1;
+    }
+
+    /* Unit Converter Specifics */
+    .converter-select-type {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+
+    .type-btn {
+      flex: 1;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.05);
+      border: 1px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .type-btn.active {
+      background: rgba(99, 102, 241, 0.1);
+      color: #6366f1;
+      border-color: #6366f1;
+      font-weight: 600;
+    }
+
+    .converter-grid {
+      display: grid;
+      gap: 15px;
+    }
+
+    .unit-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .unit-select {
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--glass-border);
+      background: rgba(255, 255, 255, 0.05);
+      /* Match global glass */
+      color: var(--text-main);
+    }
+
+    body.dark-mode .unit-select option {
+      background: #1f2937;
+      /* A dark color from the theme */
+      color: #f3f4f6;
+      /* The main text color from the theme */
+    }
+
+    /* HISTORY */
+    .history-panel h3 {
+      margin-top: 0;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--glass-border);
+      font-size: 1.1rem;
+    }
+
+    .history-content {
+      flex-grow: 1;
+      overflow-y: auto;
+      margin: 10px 0;
+      scrollbar-width: thin;
+    }
+
+    .history-content p {
+      padding: 8px;
+      margin: 4px 0;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 0.85rem;
+      border-left: 3px solid transparent;
+    }
+
+    :root .history-content p {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    body.dark-mode .history-content p {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .history-content p:hover {
+      background: rgba(99, 102, 241, 0.1);
+      border-left-color: #6366f1;
+    }
+
+    .clear-history-panel {
+      background: var(--secondary-grad);
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 0.9rem;
+      margin-top: auto;
+    }
+
+    #splash {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #111;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      font-size: 1.5rem;
+      transition: opacity 0.5s ease;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #splash.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Video Background -->
+  <video autoplay muted loop id="background-video">
+    <source src="https://cdn.pixabay.com/video/2020/02/29/33031-393909839.mp4" type="video/mp4">
+  </video>
+
+  <!-- Abstract Background -->
+  <div class="bg-animation">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+  </div>
+
+  <!-- Dark/Light Theme Toggle Button -->
+  <div class="fixed-toggles">
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle Dark or Light Theme">
+      <i class="fas fa-moon"></i><span class="theme-text">Dark</span>
+    </button>
+  </div>
+
+  <div id="splash">Loading Smart Calculator...</div>
+
+  <!-- Calculator Wrapper -->
+  <div class="main-container">
+
+    <!-- MOVED TABS: Nav Dock -->
+    <div class="nav-dock">
+      <div class="tabs">
+        <button class="active" onclick="showCalculator('standard')"><i class="fas fa-calculator"></i> Standard</button>
+        <button onclick="showCalculator('cash')"><i class="fas fa-money-bill-wave"></i> Cash</button>
+        <button onclick="showCalculator('loan')"><i class="fas fa-university"></i> Loan</button>
+        <button onclick="showCalculator('unit')"><i class="fas fa-exchange-alt"></i> Unit</button>
+        <button onclick="showCalculator('date')"><i class="far fa-calendar-alt"></i> Date</button>
+        <button onclick="showCalculator('bmi')"><i class="fas fa-weight"></i> BMI</button>
+      </div>
+    </div>
+
+    <!-- Calculator Section -->
+    <div class="calculator-wrapper">
+      <div class="container">
+
+
+
+        <!-- 1. STANDARD CALCULATOR (Preserved) -->
+        <div id="standard" role="tabpanel" class="calculator active">
+          <!-- CHANGED INPUT TO TEXTAREA FOR VERTICAL WRAPPING -->
+          <textarea class="display" id="display" aria-live="polite" aria-atomic="true" autocomplete="off"
+            spellcheck="false"></textarea>
+
+          <!-- SCIENTIFIC TOGGLE & VOICE -->
+          <div style="display: flex; justify-content: space-between; margin-bottom: 5px; align-items:center;">
+            <button id="voice-btn" onclick="startVoiceControl()"
+              style="background:var(--btn-bg); border:1px solid var(--glass-border); color:var(--text-main); cursor:pointer; font-size:1.1rem; padding:8px 12px; border-radius:50%; transition:all 0.3s; box-shadow:var(--shadow);">
+              <i class="fas fa-microphone"></i>
+            </button>
+            <!-- No Scientific Toggle here -->
+          </div>
+
+          <div class="memory-buttons" style="display:flex; gap:10px; margin-bottom:10px;">
+            <button onclick="memoryStore()" style="flex:1;">M+</button>
+            <button onclick="memorySubtract()" style="flex:1;">M-</button>
+            <button onclick="memoryRecall()" style="flex:1;">MR</button>
+            <button onclick="memoryClear()" style="flex:1;">MC</button>
+          </div>
+          <div class="gst-controls" style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
+            <select id="gstRate"
+              style="padding:8px; border-radius:12px; border:1px solid var(--glass-border); background:var(--glass-bg); color:var(--text-main); font-weight:600;">
+              <option value="5">GST 5%</option>
+              <option value="12">GST 12%</option>
+              <option value="18" selected>GST 18%</option>
+              <option value="28">GST 28%</option>
+            </select>
+            <button onclick="calculateGST('add')"
+              style="flex:1; padding:8px; border-radius:12px; background:rgba(16, 185, 129, 0.2); color:#10b981; border:1px solid rgba(16, 185, 129, 0.3); font-weight:600; cursor:pointer;">+
+              GST</button>
+            <button onclick="calculateGST('sub')"
+              style="flex:1; padding:8px; border-radius:12px; background:rgba(239, 68, 68, 0.2); color:#ef4444; border:1px solid rgba(239, 68, 68, 0.3); font-weight:600; cursor:pointer;">-
+              GST</button>
+          </div>
+
+          <div class="buttons" id="std-buttons">
+            <button class="btn-clear" onclick="clearDisplay()">C</button>
+            <button onclick="backspace()" aria-label="Backspace"><i class="fas fa-backspace"></i></button>
+            <button onclick="press('/')" aria-label="Divide"><i class="fas fa-divide"></i></button>
+            <button onclick="press('*')" aria-label="Multiply"><i class="fas fa-times"></i></button>
+            <button onclick="press('7')">7</button>
+            <button onclick="press('8')">8</button>
+            <button onclick="press('9')">9</button>
+            <button onclick="press('-')" aria-label="Subtract"><i class="fas fa-minus"></i></button>
+            <button onclick="press('4')">4</button>
+            <button onclick="press('5')">5</button>
+            <button onclick="press('6')">6</button>
+            <button onclick="press('+')" aria-label="Add"><i class="fas fa-plus"></i></button>
+            <button onclick="press('1')">1</button>
+            <button onclick="press('2')">2</button>
+            <button onclick="press('3')">3</button>
+            <button class="btn-equal" onclick="calculate()" aria-label="Equals"><i class="fas fa-equals"></i></button>
+            <button onclick="press('0')" class="zero">0</button>
+            <button onclick="press('.')">.</button>
+          </div>
+
+        </div>
+
+        <!-- 2. CASH CALCULATOR (Preserved) -->
+        <div id="cash" role="tabpanel" class="cash-calculator">
+          <div class="cash-table">
+            <!-- 500 -->
+            <div class="cash-row">
+              <label for="c500"><i class="fas fa-rupee-sign"></i> 500</label>
+              <div class="cash-input-total">
+                <input type="number" id="c500" placeholder="Count"
+                  oninput="validateCashInput(this); updateCashTotal();">
+                <span id="t500" class="note-total">₹0</span>
+              </div>
+            </div>
+            <!-- 200 -->
+            <div class="cash-row">
+              <label for="c200"><i class="fas fa-rupee-sign"></i> 200</label>
+              <div class="cash-input-total">
+                <input type="number" id="c200" placeholder="Count"
+                  oninput="validateCashInput(this); updateCashTotal();">
+                <span id="t200" class="note-total">₹0</span>
+              </div>
+            </div>
+            <!-- 100 -->
+            <div class="cash-row">
+              <label for="c100"><i class="fas fa-rupee-sign"></i> 100</label>
+              <div class="cash-input-total">
+                <input type="number" id="c100" placeholder="Count"
+                  oninput="validateCashInput(this); updateCashTotal();">
+                <span id="t100" class="note-total">₹0</span>
+              </div>
+            </div>
+            <!-- 50 -->
+            <div class="cash-row">
+              <label for="c50"><i class="fas fa-rupee-sign"></i> 50</label>
+              <div class="cash-input-total">
+                <input type="number" id="c50" placeholder="Count" oninput="validateCashInput(this); updateCashTotal();">
+                <span id="t50" class="note-total">₹0</span>
+              </div>
+            </div>
+            <!-- 20 -->
+            <div class="cash-row">
+              <label for="c20"><i class="fas fa-rupee-sign"></i> 20</label>
+              <div class="cash-input-total">
+                <input type="number" id="c20" placeholder="Count" oninput="validateCashInput(this); updateCashTotal();">
+                <span id="t20" class="note-total">₹0</span>
+              </div>
+            </div>
+            <!-- 10 -->
+            <div class="cash-row">
+              <label for="c10"><i class="fas fa-rupee-sign"></i> 10</label>
+              <div class="cash-input-total">
+                <input type="number" id="c10" placeholder="Count" oninput="validateCashInput(this); updateCashTotal();">
+                <span id="t10" class="note-total">₹0</span>
+              </div>
+            </div>
+            <!-- Coins -->
+            <div class="cash-row">
+              <label for="coins"><i class="fas fa-coins"></i> Coins</label>
+              <div class="cash-input-total">
+                <input type="number" id="coins" placeholder="Total"
+                  oninput="validateCashInput(this); updateCashTotal();">
+                <span id="tcoins" class="note-total">₹0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="display" id="cashTotal" aria-live="polite" aria-atomic="true">Total: ₹0</div>
+
+          <div class="cash-actions">
+            <button class="btn-save" onclick="saveCashToExcel()"><i class="fas fa-save"></i> Save</button>
+            <button onclick="printCashSummary()"><i class="fas fa-print"></i> Print</button>
+            <button onclick="clearCashInputs()"><i class="fas fa-eraser"></i> Clear All</button>
+          </div>
+
+          <!-- Existing Currency Converter in Cash Tab -->
+          <div class="currency-converter">
+            <label for="currency"><i class="fas fa-exchange-alt"></i> Currency:</label>
+            <select id="currency">
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="GBP">GBP</option>
+              <option value="JPY">JPY</option>
+            </select>
+            <button onclick="convertCurrency()">Convert</button>
+            <div id="convertedTotal" aria-live="polite" aria-atomic="true"></div>
+          </div>
+        </div>
+
+        <!-- 3. LOAN CALCULATOR (New Feature) -->
+        <div id="loan" role="tabpanel" class="loan-calculator">
+          <div style="flex-grow:1; padding: 5px;">
+            <div class="form-group">
+              <label>Loan Amount (₹)</label>
+              <input type="number" id="loanAmount" class="form-input" placeholder="e.g. 500000">
+            </div>
+            <div class="form-group">
+              <label>Interest Rate (% per annum)</label>
+              <input type="number" id="loanRate" class="form-input" placeholder="e.g. 8.5">
+            </div>
+            <div class="form-group">
+              <label>Loan Tenure (Years)</label>
+              <input type="number" id="loanTerm" class="form-input" placeholder="e.g. 5">
+            </div>
+
+            <div class="loan-actions">
+              <button class="btn-calculate-loan" onclick="calculateLoan()">Calculate EMI</button>
+              <button class="btn-clear-loan" onclick="clearLoanInputs()">Clear</button>
+            </div>
+
+            <div class="results-box" id="loanResults" style="display:none;">
+              <div class="result-item">
+                <span>Monthly EMI:</span>
+                <span id="emiResult" style="font-weight:600;">₹0</span>
+              </div>
+              <div class="result-item">
+                <span>Total Interest:</span>
+                <span id="interestResult">₹0</span>
+              </div>
+              <div class="result-item">
+                <span>Total Payment:</span>
+                <span id="paymentResult">₹0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. UNIT CONVERTER (New Feature) -->
+        <div id="convert" role="tabpanel" class="unit-converter">
+          <div class="converter-select-type">
+            <button class="type-btn active" onclick="setConverterType('length')">Length</button>
+            <button class="type-btn" onclick="setConverterType('data')">Data</button>
+            <button class="type-btn" onclick="setConverterType('mass')">Mass</button>
+            <button class="type-btn" onclick="setConverterType('currency')">Currency</button>
+          </div>
+
+          <div class="converter-grid">
+            <div class="unit-group">
+              <label>From</label>
+              <input type="number" id="convertInput" class="form-input" placeholder="1" oninput="convertUnit()">
+              <select id="unitFrom" class="unit-select" onchange="convertUnit()"></select>
+            </div>
+
+            <div style="text-align:center; color:var(--text-muted); font-size:1.2rem;">
+              <i class="fas fa-arrow-down"></i>
+            </div>
+
+            <div class="unit-group">
+              <label>To</label>
+              <input type="text" id="convertOutput" class="form-input" readonly placeholder="Result">
+              <select id="unitTo" class="unit-select" onchange="convertUnit()"></select>
+            </div>
+          </div>
+
+
+          <button class="btn-clear-loan" style="margin-top:15px;" onclick="clearConverterInputs()">Clear
+            All</button>
+        </div>
+
+        <!-- 5. DATE CALCULATOR (New Feature) -->
+        <div id="date" role="tabpanel" class="date-calculator"
+          style="display:none; flex-direction:column; height:100%; width:100%;">
+          <div class="converter-select-type" style="margin-bottom:15px;">
+            <button class="type-btn active" onclick="showDateMode('age')">Age</button>
+            <button class="type-btn" onclick="showDateMode('diff')">Difference</button>
+          </div>
+
+          <!-- Age Calculator -->
+          <div id="age-calc" class="date-mode-content">
+            <div class="form-group">
+              <label>Date of Birth</label>
+              <input type="date" id="dob" class="form-input" onchange="calculateAge()">
+            </div>
+            <div class="result-item" style="margin-top:20px; flex-direction:column; align-items:center; gap:10px;">
+              <span style="font-size:1rem; color:var(--text-muted);">Your Age:</span>
+              <span id="ageResult" style="font-size:1.5rem; font-weight:700; color:#6366f1;">--</span>
+              <span id="nextBday" style="font-size:0.9rem; color:var(--text-muted);">Next Birthday in: --</span>
+            </div>
+          </div>
+
+          <!-- Date Difference -->
+          <div id="diff-calc" class="date-mode-content" style="display:none;">
+            <div class="form-group">
+              <label>Start Date</label>
+              <input type="date" id="date1" class="form-input">
+            </div>
+            <div class="form-group">
+              <label>End Date</label>
+              <input type="date" id="date2" class="form-input">
+            </div>
+            <button class="btn-calculate-loan" onclick="calculateDateDiff()"
+              style="width:100%; margin-top:10px;">Calculate Difference</button>
+
+            <div class="result-item" style="margin-top:20px; flex-direction:column; align-items:center; gap:10px;">
+              <span style="font-size:1rem; color:var(--text-muted);">Difference:</span>
+              <span id="diffResult" style="font-size:1.5rem; font-weight:700; color:#ec4899;">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. BMI CALCULATOR (New Feature) -->
+        <div id="bmi" role="tabpanel" class="bmi-calculator"
+          style="display:none; flex-direction:column; height:100%; width:100%; padding:10px; justify-content:center;">
+
+          <div class="form-group" style="margin-bottom:20px;">
+            <label>Age (years)</label>
+            <input type="number" id="bmiAge" class="form-input" placeholder="e.g. 25">
+          </div>
+
+          <div class="form-group" style="margin-bottom:20px;">
+            <label>Weight (kg)</label>
+            <input type="number" id="bmiWeight" class="form-input" placeholder="e.g. 70">
+          </div>
+
+          <div class="form-group" style="margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+              <label>Height</label>
+              <select id="bmiHeightUnit" onchange="toggleBMIHeightUnit()"
+                style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:5px; border-radius:4px; font-size:0.9rem;">
+                <option value="cm">cm</option>
+                <option value="ft">ft / in</option>
+              </select>
+            </div>
+
+            <!-- CM Input -->
+            <input type="number" id="bmiHeight" class="form-input" placeholder="e.g. 175" style="display:block;">
+
+            <!-- FT/IN Input -->
+            <div id="bmiHeightFtIn" style="display:none; gap:10px;">
+              <input type="number" id="bmiFeet" class="form-input" placeholder="Feet" style="flex:1;">
+              <input type="number" id="bmiInches" class="form-input" placeholder="Inches" style="flex:1;">
+            </div>
+          </div>
+
+          <button class="btn-calculate-loan" onclick="calculateBMI()"
+            style="width:100%; margin-top:10px; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+            Calculate BMI
+          </button>
+
+          <div class="result-item" style="margin-top:30px; flex-direction:column; align-items:center; gap:10px;">
+            <span style="font-size:1rem; color:var(--text-muted);">Your BMI:</span>
+            <span id="bmiResult" style="font-size:2.5rem; font-weight:700; color:#10b981;">--</span>
+            <span id="bmiCategory" style="font-size:1.1rem; color:#fff; font-weight:500;">--</span>
+
+            <!-- Visual BMI Bar -->
+            <div class="bmi-bar-container"
+              style="width:100%; max-width:300px; height:10px; background:#333; border-radius:5px; margin-top:15px; position:relative; overflow:hidden;">
+              <div id="bmiBarFill"
+                style="width:0%; height:100%; background: linear-gradient(90deg, #eab308, #10b981, #f97316, #ef4444); transition: width 0.5s ease;">
+              </div>
+              <!-- Marker arrow or line could be added if needed, but simple fill is good for now -->
+            </div>
+
+            <!-- Ideal Range Text -->
+            <span id="bmiIdealRange"
+              style="font-size:0.9rem; color:var(--text-muted); margin-top:10px; text-align:center;">
+              Recommended Weight: --
+            </span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- History Panel -->
+    <div class="history-panel" id="history-panel">
+      <h3>History</h3>
+      <div class="history-content" id="history-content" aria-live="polite"></div>
+      <button class="clear-history-panel" onclick="clearHistory()"><i class="fas fa-trash"></i> Clear
+        History</button>
+    </div>
+  </div>
+
+  <script>
+    /* --- PRESERVED LOGIC FROM YOUR script.js --- */
+    let expression = "";
+    let memory = 0;
+    let history = [];
+    // State for new converter
+    let currentConverterType = 'length';
+    // --- CURRENCY LOGIC VARIABLES ---
+    let currencyRatesFetched = false;
+
+    // Initialize Audio Context
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playClick() {
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.05);
+      gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.05);
+    }
+
+    function loadHistory() {
+      const savedHistory = localStorage.getItem("calcHistory");
+      if (savedHistory) {
+        history = savedHistory.split('\n').filter(entry => entry.trim() !== '');
+        const historyElement = document.getElementById("history-content");
+        if (historyElement) {
+          historyElement.innerHTML = history.map(entry => `<p>${entry}</p>`).join("");
+          historyElement.scrollTop = historyElement.scrollHeight;
+        }
+      }
+    }
+
+    function saveHistory() {
+      localStorage.setItem("calcHistory", history.join('\n'));
+    }
+
+    function toggleTheme() {
+      document.body.classList.toggle("dark-mode");
+      const isDarkMode = document.body.classList.contains("dark-mode");
+      localStorage.setItem("theme", isDarkMode ? "dark" : "light");
+
+      const themeToggle = document.querySelector('.theme-toggle');
+      const themeIcon = themeToggle.querySelector('i');
+      const themeText = themeToggle.querySelector('.theme-text');
+
+      if (isDarkMode) {
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+        themeText.textContent = 'Light';
+      } else {
+        themeIcon.classList.remove('fa-sun');
+        themeIcon.classList.add('fa-moon');
+        themeText.textContent = 'Dark';
+      }
+      playClick();
+    }
+
+    function getActiveMode() {
+      if (document.querySelector('.calculator').classList.contains('active')) return 'standard';
+      if (document.getElementById('scientific').classList.contains('active')) return 'scientific';
+      return null;
+    }
+
+    function updateDisplay(value) {
+      const mode = getActiveMode();
+      if (mode === 'standard') {
+        const d = document.getElementById("display");
+        if (d) d.value = value || "";
+      } else if (mode === 'scientific') {
+        const d = document.getElementById("sci-display");
+        if (d) d.value = value || "";
+      }
+    }
+
+    /* --- UPDATED showCalculator TO HANDLE NEW TABS --- */
+    function showCalculator(type) {
+      // Hide all panels
+      document.querySelectorAll('.calculator, .cash-calculator, .loan-calculator, .unit-converter, .date-calculator, .scientific-calculator, .bmi-calculator').forEach(el => {
+        el.style.display = 'none';
+        el.classList.remove('active');
+      });
+
+      // Reset all tabs
+      document.querySelectorAll(".tabs button").forEach(tab => tab.classList.remove("active"));
+
+      // Activate specific tab (search by onclick)
+      const tab = document.querySelector(`.tabs button[onclick="showCalculator('${type}')"]`);
+      if (tab) tab.classList.add("active");
+
+      // Show content
+      if (type === 'standard') {
+        const el = document.querySelector('.calculator');
+        el.style.display = 'flex';
+        el.classList.add('active');
+        updateDisplay(expression);
+      }
+
+      else if (type === 'cash') {
+        document.getElementById('cash').style.display = 'flex';
+        document.getElementById('cash').classList.add('active');
+        updateCashTotal();
+      }
+      else if (type === 'loan') {
+        document.getElementById('loan').style.display = 'flex';
+        document.getElementById('loan').classList.add('active');
+      }
+      else if (type === 'unit') {
+        document.getElementById('convert').style.display = 'flex';
+        document.getElementById('convert').classList.add('active');
+      }
+      else if (type === 'date') {
+        document.getElementById('date').style.display = 'flex';
+        document.getElementById('date').classList.add('active');
+      }
+      else if (type === 'bmi') {
+        document.getElementById('bmi').style.display = 'flex';
+        document.getElementById('bmi').classList.add('active');
+      }
+      playClick();
+    }
+
+    function press(val) {
+      // Detect active display
+      let display;
+      if (document.querySelector('.calculator').classList.contains('active')) {
+        display = document.getElementById("display");
+      } else {
+        return; // Not in a keypad mode
+      }
+
+      const startPos = display.selectionStart;
+      const endPos = display.selectionEnd;
+      const currentValue = display.value;
+      const newValue = currentValue.substring(0, startPos) + val + currentValue.substring(endPos);
+
+      // Update global expression if standard
+      if (document.querySelector('.calculator').classList.contains('active')) {
+        expression = newValue;
+      }
+
+      display.value = newValue;
+      const newCursorPos = startPos + val.length;
+      display.setSelectionRange(newCursorPos, newCursorPos);
+      display.focus();
+      playClick();
+    }
+
+    function clearDisplay() {
+      const mode = getActiveMode();
+      if (mode === 'standard') {
+        expression = "";
+        updateDisplay("");
+        playClick();
+        document.getElementById("display").focus();
+      }
+    }
+
+    function backspace() {
+      const mode = getActiveMode();
+      if (mode === 'standard') {
+        const display = document.getElementById("display");
+
+        if (document.activeElement === display) {
+          setTimeout(() => expression = display.value, 0);
+          playClick();
+          return;
+        }
+        if (expression.length > 0) {
+          expression = expression.slice(0, -1);
+          updateDisplay(expression);
+          playClick();
+        }
+      }
+    }
+
+    // Removed toggleScientific()
+
+    // --- SCIENTIFIC MODE STATE ---
+    function calculate() {
+      if (document.getElementById("standard").classList.contains("active")) {
+        const display = document.getElementById("display");
+        expression = display.value;
+        try {
+          // Pre-processing
+          let expr = expression;
+
+          // Simple replacements for Standard mode if needed, though Standard usually just has basic ops.
+          // But keeping basic Math support is good practice just in case user types them?
+          // Actually user has no buttons for sin/cos in Standard.
+          // Just keep basic cleaning.
+
+          // Handle Power Operator '^' -> '**'
+          expr = expr.replace(/\^/g, '**');
+
+          // Percentage Logic
+          expr = expr.replace(/(\d+(?:\.\d+)?)([+\-])(\d+(?:\.\d+)?)%/g, (m, a, op, b) => {
+            let p = parseFloat(b) / 100;
+            return op === '+' ? `(${a}*(1+${p}))` : `(${a}*(1-${p}))`;
+          });
+          expr = expr.replace(/(\d+(?:\.\d+)?)%/g, '($1/100)');
+
+          // Remove leading zeros
+          expr = expr.replace(/(?<![\d.])0+(?=[1-9])/g, '');
+
+          if (!expr) return;
+
+          let result = Function('"use strict";return (' + expr + ')')();
+          if (!isFinite(result) || isNaN(result)) {
+            display.value = "Error";
+            expression = "";
+            playClick();
+            return;
+          }
+
+          // FIX: Handle floating point precision errors (e.g., 1000 - 18% = 820.00000001)
+          // We limit to 10 decimal places and parse back to float to remove trailing zeros
+          result = parseFloat(result.toFixed(10));
+
+          const calculation = `${expression} = ${result}`;
+          addToHistory(calculation);
+          expression = result.toString();
+          updateDisplay(expression);
+          playClick();
+
+        } catch (error) {
+          console.error("Calculation Error:", error);
+          display.value = "Error";
+        }
+      }
+    }
+
+    function addToHistory(entry) {
+      const serialNumber = history.length + 1;
+      const formattedEntry = `${serialNumber}. ${entry}`;
+      history.push(formattedEntry);
+      if (history.length > 10) {
+        history.shift();
+      }
+      const historyElement = document.getElementById("history-content");
+      if (historyElement) {
+        historyElement.innerHTML = history.map(entry => `<p>${entry}</p>`).join("");
+        historyElement.scrollTop = historyElement.scrollHeight;
+        saveHistory();
+      }
+    }
+
+    function clearHistory() {
+      history = [];
+      const historyElement = document.getElementById("history-content");
+      if (historyElement) {
+        historyElement.innerHTML = "";
+        saveHistory();
+        playClick();
+      }
+    }
+
+    function memoryAdd() {
+      if (document.getElementById("standard").classList.contains("active")) {
+        const currentValue = parseFloat(expression || "0");
+        if (!isNaN(currentValue)) {
+          memory += currentValue;
+          alert(`Memory: ${memory}`);
+          playClick();
+        }
+      }
+    }
+
+    function memorySubtract() {
+      if (document.getElementById("standard").classList.contains("active")) {
+        const currentValue = parseFloat(expression || "0");
+        if (!isNaN(currentValue)) {
+          memory -= currentValue;
+          alert(`Memory: ${memory}`);
+          playClick();
+        }
+      }
+    }
+
+    function memoryRecall() {
+      if (document.getElementById("standard").classList.contains("active")) {
+        expression = memory.toString();
+        updateDisplay(expression);
+        playClick();
+      }
+    }
+
+    function memoryClear() {
+      if (document.getElementById("standard").classList.contains("active")) {
+        memory = 0;
+        alert("Memory Cleared");
+        playClick();
+      }
+    }
+
+    function calculateGST(mode) {
+      if (document.getElementById("standard").classList.contains("active")) {
+        const display = document.getElementById("display");
+        let currentVal = display.value;
+
+        // Evaluate current expression first if it's a calculation
+        try {
+          if (!currentVal) return;
+          // Simple safe eval for the current number
+          const safeExpression = currentVal.replace(/[^0-9+\-*/().]/g, '');
+          const result = Function('"use strict";return (' + safeExpression + ')')();
+
+          const rate = parseFloat(document.getElementById('gstRate').value);
+          let finalVal = 0;
+          let detail = "";
+
+          if (mode === 'add') {
+            const gstAmount = result * (rate / 100);
+            finalVal = result + gstAmount;
+            detail = `${result} + ${rate}% GST`;
+          } else {
+            // Remove GST (Reverse calculation: Original = Total / (1 + rate/100))
+            finalVal = result / (1 + (rate / 100));
+            detail = `${result} - ${rate}% GST`;
+          }
+
+          // Format to 2 decimal places
+          finalVal = parseFloat(finalVal.toFixed(2));
+
+          expression = finalVal.toString();
+          updateDisplay(expression);
+          addToHistory(`${detail} = ${finalVal}`);
+          playClick();
+
+        } catch (e) {
+          console.error("GST Error", e);
+          display.value = "Error";
+        }
+      }
+    }
+
+    function startVoiceControl() {
+      if (!('webkitSpeechRecognition' in window)) {
+        alert("Voice control is not supported in this browser. Try Chrome or Edge.");
+        return;
+      }
+
+      const recognition = new webkitSpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+
+      const btn = document.getElementById('voice-btn');
+      btn.style.color = '#ef4444'; // Red to indicate recording
+      btn.classList.add('pulse-anim'); // Add animation class if exists or just color
+
+      recognition.onresult = function (event) {
+        const transcript = event.results[0][0].transcript.toLowerCase();
+        console.log("Voice Input:", transcript);
+
+        let command = transcript;
+
+        // Natural Language processing for calculator
+        command = command.replace(/plus/g, '+')
+          .replace(/minus/g, '-')
+          .replace(/multiply by/g, '*')
+          .replace(/multiplied by/g, '*')
+          .replace(/into/g, '*')
+          .replace(/times/g, '*')
+          .replace(/x/g, '*')
+          .replace(/divided by/g, '/')
+          .replace(/divide/g, '/')
+          .replace(/over/g, '/')
+          .replace(/equals/g, '=')
+          .replace(/equal/g, '=');
+
+        // Filter only valid chars
+        let cleanCommand = command.replace(/[^0-9+\-*/.=]/g, '');
+
+        // If the user said "Calculate 5 plus 5", the cleanCommand might be "5+5"
+        // If they said "2 into 5 equals", it sends "2*5="
+
+        if (cleanCommand) {
+          expression = cleanCommand.replace('=', ''); // Remove equal to just set expression
+          updateDisplay(expression);
+          if (command.includes('=')) {
+            calculate();
+          }
+          playClick();
+        } else {
+          alert("Could not understand command: " + transcript);
+        }
+      };
+
+      recognition.onerror = function (event) {
+        console.error("Voice Error", event.error);
+        alert("Voice Error: " + event.error);
+        btn.style.color = 'var(--text-main)';
+      };
+
+      recognition.onend = function () {
+        btn.style.color = 'var(--text-main)';
+      };
+
+      recognition.start();
+    }
+
+    function showDateMode(mode) {
+      document.querySelectorAll('.date-mode-content').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.converter-select-type .type-btn').forEach(el => el.classList.remove('active'));
+
+      if (mode === 'age') {
+        document.getElementById('age-calc').style.display = 'flex';
+        document.querySelector('.converter-select-type .type-btn:nth-child(1)').classList.add('active');
+      } else {
+        document.getElementById('diff-calc').style.display = 'flex';
+        document.querySelector('.converter-select-type .type-btn:nth-child(2)').classList.add('active');
+      }
+      playClick();
+    }
+
+    function calculateAge() {
+      const dobStr = document.getElementById('dob').value;
+      if (!dobStr) return;
+
+      const dob = new Date(dobStr);
+      const today = new Date();
+
+      let years = today.getFullYear() - dob.getFullYear();
+      let months = today.getMonth() - dob.getMonth();
+      let days = today.getDate() - dob.getDate();
+
+      if (days < 0) {
+        months--;
+        days += new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+      }
+      if (months < 0) {
+        years--;
+        months += 12;
+      }
+
+      document.getElementById('ageResult').innerText = `${years} Y, ${months} M, ${days} D`;
+
+      const nextBday = new Date(today.getFullYear(), dob.getMonth(), dob.getDate());
+      if (today > nextBday) {
+        nextBday.setFullYear(today.getFullYear() + 1);
+      }
+
+      const diffTime = Math.abs(nextBday - today);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      document.getElementById('nextBday').innerText = `Next Birthday in: ${diffDays} days`;
+
+      playClick();
+    }
+
+    function calculateDateDiff() {
+      const d1 = document.getElementById('date1').value;
+      const d2 = document.getElementById('date2').value;
+
+      if (!d1 || !d2) return;
+
+      const date1 = new Date(d1);
+      const date2 = new Date(d2);
+
+      const diffTime = Math.abs(date2 - date1);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      // Calculate years, months, days roughly
+      let years = Math.floor(diffDays / 365);
+      let months = Math.floor((diffDays % 365) / 30);
+      let days = Math.floor((diffDays % 365) % 30);
+
+      document.getElementById('diffResult').innerText = `${diffDays} Days`;
+      playClick();
+    }
+
+    function validateCashInput(input) {
+      const maxLength = 9;
+      input.value = input.value.replace(/\D/g, '').slice(0, maxLength);
+    }
+
+    function updateCashTotal() {
+      if (document.getElementById("cash").classList.contains("active")) {
+        let total = 0;
+        const notes = [{ value: 500, id: 'c500', totalId: 't500' }, { value: 200, id: 'c200', totalId: 't200' }, { value: 100, id: 'c100', totalId: 't100' }, { value: 50, id: 'c50', totalId: 't50' }, { value: 20, id: 'c20', totalId: 't20' }, { value: 10, id: 'c10', totalId: 't10' },];
+        const formatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+
+        notes.forEach(note => {
+          const count = parseInt(document.getElementById(note.id).value) || 0;
+          const noteTotal = count * note.value;
+          total += noteTotal;
+          const totalSpan = document.getElementById(note.totalId);
+          if (totalSpan) {
+            totalSpan.innerText = formatter.format(noteTotal);
+          }
+        });
+
+        const coins = parseInt(document.getElementById("coins").value) || 0;
+        total += coins;
+        const coinsTotalSpan = document.getElementById("tcoins");
+        if (coinsTotalSpan) {
+          coinsTotalSpan.innerText = formatter.format(coins);
+        }
+
+        const totalDisplay = document.getElementById("cashTotal");
+        if (totalDisplay) {
+          totalDisplay.innerText = `Total: ${formatter.format(total)}`;
+        }
+      }
+    }
+
+    function clearCashInputs() {
+      if (document.getElementById("cash").classList.contains("active")) {
+        const cashInputs = document.querySelectorAll(".cash-table input[type='number']");
+        cashInputs.forEach(input => {
+          input.value = "";
+        });
+        updateCashTotal();
+        playClick();
+      }
+    }
+
+    function saveCashToExcel() {
+      if (document.getElementById("cash").classList.contains("active")) {
+        const notes = [{ value: 500, id: 'c500' }, { value: 200, id: 'c200' }, { value: 100, id: 'c100' }, { value: 50, id: 'c50' }, { value: 20, id: 'c20' }, { value: 10, id: 'c10' },];
+        const coins = parseInt(document.getElementById("coins").value) || 0;
+        const totalAmountText = document.getElementById("cashTotal").innerText;
+        const grandTotal = parseFloat(totalAmountText.replace(/[^0-9.]/g, "")) || 0;
+
+        const now = new Date();
+        const date = now.toLocaleDateString("en-GB").replace(/\//g, "-");
+        const time = now.toLocaleTimeString("en-GB", { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+        const data = [["Cash Summary - Date:", date], ["Time:", time], [], ["Value (₹)", "Quantity", "Total (₹)"]];
+        let totalNotesCount = 0;
+        let totalNotesValue = 0;
+
+        notes.forEach(note => {
+          const count = parseInt(document.getElementById(note.id).value) || 0;
+          const total = count * note.value;
+          totalNotesCount += count;
+          totalNotesValue += total;
+          data.push([note.value, count, total]);
+        });
+
+        data.push(["Coins", "", coins]);
+        data.push([]);
+        data.push(["Total Notes Count:", totalNotesCount, ""]);
+        data.push(["Total Notes Value:", "", totalNotesValue]);
+        data.push(["Grand Total:", "", grandTotal]);
+
+        const workbook = XLSX.utils.book_new();
+        const sheet = XLSX.utils.aoa_to_sheet(data);
+        const colWidths = data[3].map((_, i) => ({ wch: Math.max(...data.map(row => (row[i] ? row[i].toString().length : 0))) + 2 }));
+        sheet['!cols'] = colWidths;
+        const sheetName = `${date} ${now.getHours()}-${now.getMinutes()}`;
+        XLSX.utils.book_append_sheet(workbook, sheet, sheetName);
+        XLSX.writeFile(workbook, `Cash Summary ${date} ${time.replace(/:/g, '-')}.xlsx`);
+        playClick();
+      }
+    }
+
+    async function convertCurrency() {
+      if (document.getElementById("cash").classList.contains("active")) {
+        const totalAmountText = document.getElementById("cashTotal").innerText;
+        const total = parseFloat(totalAmountText.replace(/Total: ₹|,/g, ""));
+
+        if (isNaN(total) || total === 0) {
+          alert("Total is 0 or invalid. Nothing to convert.");
+          return;
+        }
+
+        const currency = document.getElementById("currency").value;
+        const convertedTotalElement = document.getElementById("convertedTotal");
+        convertedTotalElement.innerText = "Fetching rates...";
+
+        const apiKey = 'YOUR_API_KEY'; // Preserved User's API Key Placeholder
+        const apiUrl = apiKey && apiKey !== 'YOUR_API_KEY' ?
+          `https://v6.exchangerate-api.com/v6/${apiKey}/latest/INR` :
+          `https://api.exchangerate-api.com/v4/latest/INR`;
+
+        try {
+          const response = await fetch(apiUrl);
+          if (!response.ok) {
+            throw new Error(`API Error: HTTP status ${response.status}`);
+          }
+          const data = await response.json();
+
+          if (data.rates && data.rates[currency]) {
+            const rate = data.rates[currency];
+            const convertedTotal = (total * rate).toFixed(2);
+            const formatter = new Intl.NumberFormat(navigator.language, { style: 'currency', currency: currency });
+            convertedTotalElement.innerText = `Converted Total: ${formatter.format(convertedTotal)}`;
+            alert(`Converted Total: ${formatter.format(convertedTotal)}`);
+            playClick();
+          } else {
+            throw new Error(`Currency "${currency}" exchange rate not available.`);
+          }
+        } catch (error) {
+          console.error("Error fetching exchange rates:", error);
+          convertedTotalElement.innerText = "Conversion Error";
+          alert(`Error fetching exchange rates: ${error.message}. Please try again later.`);
+        }
+      }
+    }
+
+    function printCashSummary() {
+      if (document.getElementById("cash").classList.contains("active")) {
+        const notesData = [{ value: 500, count: parseInt(document.getElementById('c500').value) || 0 }, { value: 200, count: parseInt(document.getElementById('c200').value) || 0 }, { value: 100, count: parseInt(document.getElementById('c100').value) || 0 }, { value: 50, count: parseInt(document.getElementById('c50').value) || 0 }, { value: 20, count: parseInt(document.getElementById('c20').value) || 0 }, { value: 10, count: parseInt(document.getElementById('c10').value) || 0 }];
+        const coins = parseInt(document.getElementById("coins").value) || 0;
+        const grandTotalText = document.getElementById("cashTotal").innerText;
+        const convertedTotalText = document.getElementById("convertedTotal").innerText;
+        const inrFormatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+
+        const summaryItemsHtml = notesData.map(item => {
+          const total = item.count * item.value;
+          return `<div class="summary-item"><strong>${inrFormatter.format(item.value)}:</strong><span>${item.count} pc(s) = ${inrFormatter.format(total)}</span></div>`;
+        }).join('') + `<div class="summary-item"><strong>Coins:</strong><span>${inrFormatter.format(coins)}</span></div>`;
+
+        let convertedTotalHtml = '';
+        if (convertedTotalText && !convertedTotalText.includes("Fetching") && !convertedTotalText.includes("Error")) {
+          convertedTotalHtml = `<div class="summary-item"><strong>Converted Total:</strong> <span>${convertedTotalText.replace('Converted Total: ', '')}</span></div>`;
+        }
+
+        const now = new Date();
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const formattedDate = now.toLocaleDateString(undefined, options);
+        const formattedTime = now.toLocaleTimeString();
+
+        const printContent = `
+            <html><head><title>Cash Summary</title><style>
+                    body { font-family: Arial, sans-serif; padding: 20px; color: #000; } h2 { text-align: center; margin-bottom: 20px; }
+                    .datetime { text-align: center; margin-bottom: 15px; font-size: 0.9rem; color: #555; }
+                    .summary-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dotted #ccc; font-size: 1rem; }
+                    .summary-item span { flex-shrink: 0; text-align: right; min-width: 150px; }
+                    #grandTotal { margin-top: 20px; padding: 10px 0; border-top: 2px solid #000; font-size: 1.5rem; font-weight: bold; text-align: right; }
+                    #grandTotal strong { font-weight: bold; margin-right: 15px; } #grandTotal span { font-weight: normal; }
+                </style></head><body><h2>Cash Summary</h2><div class="datetime">${formattedDate} - ${formattedTime}</div><div class="summary-items-list">${summaryItemsHtml}</div>
+                <div id="grandTotal"><strong>Total:</strong> <span>${grandTotalText.replace('Total: ', '')}</span></div>
+                ${convertedTotalHtml}</body></html>`;
+
+        const printWindow = window.open("", "_blank");
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        printWindow.print();
+        printWindow.close();
+        playClick();
+      }
+    }
+
+    /* --- NEW LOGIC: LOAN CALCULATOR --- */
+    function calculateLoan() {
+      const P = parseFloat(document.getElementById('loanAmount').value);
+      const annualRate = parseFloat(document.getElementById('loanRate').value);
+      const years = parseFloat(document.getElementById('loanTerm').value);
+
+      if (!P || !annualRate || !years) {
+        alert("Please fill all fields correctly.");
+        return;
+      }
+
+      const R = (annualRate / 12) / 100;
+      const N = years * 12;
+
+      const emi = (P * R * Math.pow(1 + R, N)) / (Math.pow(1 + R, N) - 1);
+      const totalPayment = emi * N;
+      const totalInterest = totalPayment - P;
+
+      const formatCurrency = (num) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(num);
+
+      document.getElementById('emiResult').innerText = formatCurrency(Math.round(emi));
+      document.getElementById('interestResult').innerText = formatCurrency(Math.round(totalInterest));
+      document.getElementById('paymentResult').innerText = formatCurrency(Math.round(totalPayment));
+
+      document.getElementById('loanResults').style.display = 'block';
+      playClick();
+    }
+
+    function clearLoanInputs() {
+      document.getElementById('loanAmount').value = "";
+      document.getElementById('loanRate').value = "";
+      document.getElementById('loanTerm').value = "";
+      document.getElementById('loanResults').style.display = 'none';
+      playClick();
+    }
+
+    /* --- NEW LOGIC: UNIT CONVERTER --- */
+    const units = {
+      length: {
+        base: 'm',
+        rates: {
+          m: { rate: 1, name: 'Meter' },
+          km: { rate: 0.001, name: 'Kilometer' },
+          cm: { rate: 100, name: 'Centimeter' },
+          mm: { rate: 1000, name: 'Millimeter' },
+          inch: { rate: 39.3701, name: 'Inch' },
+          ft: { rate: 3.28084, name: 'Foot' },
+          yard: { rate: 1.09361, name: 'Yard' },
+          mile: { rate: 0.000621371, name: 'Mile' }
+        }
+      },
+      data: {
+        base: 'GB',
+        rates: {
+          B: { rate: 1073741824, name: 'Byte' },
+          KB: { rate: 1048576, name: 'Kilobyte' },
+          MB: { rate: 1024, name: 'Megabyte' },
+          GB: { rate: 1, name: 'Gigabyte' },
+          TB: { rate: 0.0009765625, name: 'Terabyte' }
+        }
+      },
+      mass: {
+        base: 'kg',
+        rates: {
+          kg: { rate: 1, name: 'Kilogram' },
+          g: { rate: 1000, name: 'Gram' },
+          mg: { rate: 1000000, name: 'Milligram' },
+          lb: { rate: 2.20462, name: 'Pound' },
+          oz: { rate: 35.274, name: 'Ounce' }
+        }
+      },
+      currency: {
+        base: 'USD',
+        rates: {
+          USD: { rate: 1, name: 'US Dollar' },
+          EUR: { rate: 0.85, name: 'Euro' },
+          GBP: { rate: 0.75, name: 'British Pound' },
+          INR: { rate: 83.50, name: 'Indian Rupee' },
+          JPY: { rate: 110.0, name: 'Japanese Yen' },
+          AUD: { rate: 1.35, name: 'Australian Dollar' },
+          CAD: { rate: 1.25, name: 'Canadian Dollar' },
+          CHF: { rate: 0.91, name: 'Swiss Franc' },
+          CNY: { rate: 6.45, name: 'Chinese Yuan' },
+          HKD: { rate: 7.78, name: 'Hong Kong Dollar' },
+          NZD: { rate: 1.43, name: 'New Zealand Dollar' }
+        }
+      }
+    };
+
+    async function setConverterType(type) {
+      currentConverterType = type;
+
+      // Update UI Tabs
+      document.querySelectorAll('.type-btn').forEach(btn => btn.classList.remove('active'));
+      // Find button with specific onclick attribute to set active
+      const clickedBtn = document.querySelector(`button[onclick="setConverterType('${type}')"]`);
+      if (clickedBtn) clickedBtn.classList.add('active');
+
+      // If currency, try to fetch live rates
+      if (type === 'currency') {
+        await fetchCurrencyRates();
+      }
+
+      populateConverterOptions();
+      document.getElementById('convertInput').value = 1;
+      convertUnit();
+      playClick();
+    }
+
+    async function fetchCurrencyRates() {
+      if (currencyRatesFetched) return;
+
+      const btn = document.querySelector('button[onclick="setConverterType(\'currency\')"]');
+      const originalText = btn.innerText;
+      btn.innerText = "Loading...";
+
+      try {
+        const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+        if (!res.ok) throw new Error("API Failed");
+        const data = await res.json();
+
+        // Update rates, but keep names if they exist
+        for (const currencyCode in data.rates) {
+          if (units.currency.rates[currencyCode]) {
+            units.currency.rates[currencyCode].rate = data.rates[currencyCode];
+          } else {
+            // Add new currency from API, name will be same as code
+            units.currency.rates[currencyCode] = { rate: data.rates[currencyCode], name: currencyCode };
+          }
+        }
+        currencyRatesFetched = true;
+
+      } catch (e) {
+        console.error("Failed to fetch live rates, using defaults.", e);
+        // Defaults are already in the object, so we just proceed
+      } finally {
+        btn.innerText = originalText;
+      }
+    }
+
+    function populateConverterOptions() {
+      const selectFrom = document.getElementById('unitFrom');
+      const selectTo = document.getElementById('unitTo');
+      const unitData = units[currentConverterType];
+      selectFrom.innerHTML = ''; selectTo.innerHTML = '';
+
+      // Sort keys alphabetically for better UX
+      Object.keys(unitData.rates).sort().forEach(unitKey => {
+        const unitInfo = unitData.rates[unitKey];
+        const optionText = `${unitInfo.name} (${unitKey.toUpperCase()})`;
+        selectFrom.add(new Option(optionText, unitKey));
+        selectTo.add(new Option(optionText, unitKey));
+      });
+
+      // Defaults
+      if (currentConverterType === 'length') { selectFrom.value = 'm'; selectTo.value = 'ft'; }
+      if (currentConverterType === 'data') { selectFrom.value = 'MB'; selectTo.value = 'GB'; }
+      if (currentConverterType === 'mass') { selectFrom.value = 'kg'; selectTo.value = 'lb'; }
+      if (currentConverterType === 'currency') { selectFrom.value = 'USD'; selectTo.value = 'INR'; }
+    }
+
+    function convertUnit() {
+      const val = parseFloat(document.getElementById('convertInput').value);
+      const from = document.getElementById('unitFrom').value;
+      const to = document.getElementById('unitTo').value;
+
+      if (isNaN(val)) {
+        document.getElementById('convertOutput').value = "";
+        return;
+      }
+
+      const rates = units[currentConverterType].rates;
+
+      // Conversion logic: (Input / RateFrom) * RateTo
+      // This works because all rates are relative to a common base (e.g., 1 USD for currency, 1 m for length)
+      const baseValue = val / rates[from].rate;
+      const finalValue = baseValue * rates[to].rate;
+
+      let result = finalValue;
+      // Format small numbers or long decimals
+      if (result < 0.000001) result = result.toExponential(4);
+      else if (result % 1 !== 0) result = parseFloat(result.toFixed(4)); // Limit decimals for currency readability
+
+      document.getElementById('convertOutput').value = result;
+    }
+
+    function clearConverterInputs() {
+      document.getElementById('convertInput').value = "";
+      document.getElementById('convertOutput').value = "";
+      playClick();
+    }
+
+    // --- KEYBOARD NAVIGATION FOR CASH INPUTS ---
+    document.addEventListener('keydown', function (e) {
+      // Basic check if cash mode is active (visible)
+      const cashMode = document.getElementById('cash');
+      if (!cashMode || cashMode.style.display === 'none') return;
+
+      const target = e.target;
+
+      // Global shortcuts for Cash Mode
+      if (e.key === 'Delete') {
+        e.preventDefault();
+        clearCashInputs(); // "Delete" key triggers Clear All
+        return;
+      }
+
+      // Input Navigation & Prevention
+      if (target.tagName === 'INPUT' && target.closest('.cash-row')) {
+        const currentRow = target.closest('.cash-row');
+
+        if (e.key === 'ArrowUp') {
+          e.preventDefault(); // Always prevent default increment
+          const prevRow = currentRow.previousElementSibling;
+          if (prevRow && prevRow.querySelector('input')) {
+            prevRow.querySelector('input').focus();
+            // Select text for easier overwriting? Optional, but typical behavior.
+            // prevRow.querySelector('input').select(); 
+          }
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault(); // Always prevent default decrement
+          const nextRow = currentRow.nextElementSibling;
+          if (nextRow && nextRow.querySelector('input')) {
+            nextRow.querySelector('input').focus();
+          }
+        }
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem("theme");
+      const themeToggle = document.querySelector('.theme-toggle');
+      const themeIcon = themeToggle.querySelector('i');
+      const themeText = themeToggle.querySelector('.theme-text');
+      if (savedTheme === "dark") {
+        document.body.classList.add("dark-mode");
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+        themeText.textContent = 'Light';
+      } else {
+        document.body.classList.remove("dark-mode");
+        themeIcon.classList.remove('fa-sun');
+        themeIcon.classList.add('fa-moon');
+        themeText.textContent = 'Dark';
+      }
+
+      // --- ADVANCED WINDOWS-STYLE DYNAMIC RESIZING ---
+      const resizeObserver = new ResizeObserver(entries => {
+        for (let entry of entries) {
+          const width = entry.contentRect.width;
+          const height = entry.contentRect.height;
+
+          // Calculate scale factors based on width and height
+          // Standard width reference: 400px, Standard height reference: 800px
+          let scaleW = width / 400;
+          let scaleH = height / 800;
+
+          // Use the smaller scale to ensure fit, but cap it for usability
+          let scale = Math.min(scaleW, scaleH);
+          if (scale < 0.8) scale = 0.8; // Don't get too tiny
+          if (scale > 1.4) scale = 1.4; // Don't get huge
+
+          // Apply dynamic padding and gaps
+          const container = document.querySelector('.container');
+          if (container) {
+            container.style.setProperty('--gap-size', `${10 * scale}px`);
+            container.style.setProperty('--btn-padding', `${12 * scale}px`);
+          }
+
+          // Dynamically size display text based on container width
+          const display = document.getElementById('display');
+          if (display) {
+            // More aggressive scaling for small widths
+            let fontSize = Math.max(1.8, Math.min(3.5, width / 200));
+            display.style.fontSize = `${fontSize}rem`;
+          }
+        }
+      });
+
+      const calcContainer = document.querySelector('.container');
+      if (calcContainer) resizeObserver.observe(calcContainer);
+
+      loadHistory();
+
+      // Initialize Converter
+      populateConverterOptions();
+
+      setTimeout(() => {
+        showCalculator('standard');
+        const splash = document.getElementById("splash");
+        if (splash) {
+          splash.classList.add("hidden");
+        }
+      }, 800);
+
+      document.querySelectorAll(".cash-table input[type='number']").forEach(input => {
+        input.addEventListener('input', () => {
+          validateCashInput(input);
+          updateCashTotal();
+          playClick();
+        });
+      });
+
+      // Also sync expression on direct typing
+      const display = document.getElementById('display');
+      display.addEventListener('input', (e) => {
+        expression = e.target.value;
+      });
+    });
+
+    // --- BMI LOGIC ---
+    // --- BMI LOGIC ---
+    function calculateBMI() {
+      const weight = parseFloat(document.getElementById('bmiWeight').value);
+      let heightCm = 0;
+
+      const unit = document.getElementById('bmiHeightUnit').value;
+
+      if (unit === 'cm') {
+        heightCm = parseFloat(document.getElementById('bmiHeight').value);
+      } else {
+        const ft = parseFloat(document.getElementById('bmiFeet').value);
+        const inch = parseFloat(document.getElementById('bmiInches').value);
+        if (ft > 0 || inch >= 0) {
+          heightCm = (ft * 30.48) + ((inch || 0) * 2.54);
+        }
+      }
+
+      if (!weight || !heightCm || weight <= 0 || heightCm <= 0) {
+        alert("Please enter valid positive numbers for weight and height.");
+        return;
+      }
+
+      // BMI = Weight(kg) / (Height(m) * Height(m))
+      const heightM = heightCm / 100;
+      const bmi = weight / (heightM * heightM);
+
+      const roundedBMI = bmi.toFixed(1);
+
+      let category = "";
+      let color = "";
+
+      if (bmi < 18.5) {
+        category = "Underweight";
+        color = "#eab308"; // Yellow
+      } else if (bmi < 25) {
+        category = "Normal Weight";
+        color = "#10b981"; // Green
+      } else if (bmi < 30) {
+        category = "Overweight";
+        color = "#f97316"; // Orange
+      } else {
+        category = "Obese";
+        color = "#ef4444"; // Red
+      }
+
+      const resultEl = document.getElementById('bmiResult');
+      const catEl = document.getElementById('bmiCategory');
+
+      resultEl.innerText = roundedBMI;
+      resultEl.style.color = color;
+
+      catEl.innerText = category;
+      catEl.style.color = color;
+
+      // Visual Bar Logic (0 to ~40)
+      // Percentage = (BMI / 40) * 100, clamped at 100%
+      let percentage = (bmi / 40) * 100;
+      if (percentage > 100) percentage = 100;
+      if (percentage < 0) percentage = 0;
+      document.getElementById('bmiBarFill').style.width = `${percentage}%`;
+
+      // Ideal Range Logic (BMI 18.5 - 24.9)
+      // Min Weight = 18.5 * heightM^2
+      // Max Weight = 24.9 * heightM^2
+      const minIdeal = (18.5 * heightM * heightM).toFixed(1);
+      const maxIdeal = (24.9 * heightM * heightM).toFixed(1);
+
+      document.getElementById('bmiIdealRange').innerText =
+        `Recommended Range: ${minIdeal} kg - ${maxIdeal} kg`;
+
+      playClick();
+    }
+
+    function toggleBMIHeightUnit() {
+      const unit = document.getElementById('bmiHeightUnit').value;
+      const cmInput = document.getElementById('bmiHeight');
+      const ftInInput = document.getElementById('bmiHeightFtIn');
+
+      if (unit === 'cm') {
+        cmInput.style.display = 'block';
+        ftInInput.style.display = 'none';
+      } else {
+        cmInput.style.display = 'none';
+        ftInInput.style.display = 'flex';
+      }
+      playClick();
+    }
+
+    function clearBMIInputs() {
+      document.getElementById('bmiWeight').value = "";
+      document.getElementById('bmiHeight').value = "";
+      document.getElementById('bmiFeet').value = "";
+      document.getElementById('bmiInches').value = "";
+      document.getElementById('bmiAge').value = "";
+      document.getElementById('bmiResult').innerText = "--";
+      document.getElementById('bmiResult').style.color = "#10b981";
+      document.getElementById('bmiCategory').innerText = "--";
+      document.getElementById('bmiCategory').style.color = "#fff";
+      document.getElementById('bmiBarFill').style.width = "0%";
+      document.getElementById('bmiIdealRange').innerText = "Recommended Weight: --";
+      playClick();
+    }
+
+    function clearDateInputs() {
+      // Clear Age Mode
+      document.getElementById('dob').value = "";
+      document.getElementById('ageResult').innerText = "--";
+      document.getElementById('nextBday').innerText = "Next Birthday in: --";
+
+      // Clear Diff Mode
+      document.getElementById('date1').value = "";
+      document.getElementById('date2').value = "";
+      document.getElementById('diffResult').innerText = "--";
+      playClick();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Determine which tab is currently visible
+      const activeStandard = document.getElementById("standard").classList.contains("active");
+      const activeCash = document.getElementById("cash").classList.contains("active");
+      const activeLoan = document.getElementById("loan").classList.contains("active");
+      const activeConvert = document.getElementById("convert").classList.contains("active");
+      const activeDate = document.getElementById("date").classList.contains("active");
+      const activeBMI = document.getElementById("bmi").classList.contains("active");
+
+      const key = e.key;
+
+      // 1. STANDARD MODE HANDLER
+      if (activeStandard) {
+        const display = document.getElementById("display");
+
+        // If user is focused on the actual textarea, specific logic
+        if (document.activeElement === display) {
+          if (key === 'Enter' || key === '=') { e.preventDefault(); calculate(); }
+          else if (key === 'Delete') { e.preventDefault(); clearDisplay(); }
+          return;
+        }
+
+        // Global capture for Standard Mode (Direct typing without click)
+        if ((key >= '0' && key <= '9') || ['+', '-', '*', '/', '.', '(', ')'].includes(key)) {
+          e.preventDefault();
+          press(key);
+        }
+        else if (key === '^') { e.preventDefault(); press('^'); }
+        else if (key === 'Enter' || key === '=') { e.preventDefault(); calculate(); }
+        else if (key === 'Backspace') { backspace(); }
+        else if (key === 'Delete') { clearDisplay(); }
+        else if (e.ctrlKey) {
+          if (key === 'm') { memoryRecall(); e.preventDefault(); }
+          else if (key === '+') { memoryAdd(); e.preventDefault(); }
+          else if (key === '-') { memorySubtract(); e.preventDefault(); }
+          else if (key === 'c') { memoryClear(); e.preventDefault(); }
+        }
+      }
+
+      // 2. CASH MODE HANDLER
+      if (activeCash) {
+        // Global delete for cash mode (specific input nav is in other listener)
+        if (key === 'Delete') { e.preventDefault(); clearCashInputs(); }
+      }
+
+      // 3. LOAN MODE HANDLER
+      if (activeLoan) {
+        if (key === 'Delete') { e.preventDefault(); clearLoanInputs(); }
+      }
+
+      // 4. UNIT MODE HANDLER
+      if (activeConvert) {
+        if (key === 'Delete') { e.preventDefault(); clearConverterInputs(); }
+      }
+
+      // 5. DATE MODE HANDLER
+      if (activeDate) {
+        if (key === 'Delete') { e.preventDefault(); clearDateInputs(); }
+      }
+
+      // 6. BMI MODE HANDLER
+      if (activeBMI) {
+        if (key === 'Delete') {
+          e.preventDefault();
+          clearBMIInputs();
+        }
+        else if (['ArrowUp', 'ArrowDown'].includes(key)) {
+          const activeEl = document.activeElement;
+          if (activeEl && activeEl.tagName === 'INPUT' && activeEl.closest('#bmi')) {
+            e.preventDefault(); // Prevent number change
+            const inputs = Array.from(document.querySelectorAll('#bmi input'));
+            const idx = inputs.indexOf(activeEl);
+
+            if (idx !== -1) {
+              if (key === 'ArrowUp' && idx > 0) {
+                inputs[idx - 1].focus();
+              } else if (key === 'ArrowDown' && idx < inputs.length - 1) {
+                inputs[idx + 1].focus();
+              }
+            }
+          }
+        }
+      }
+
+      // Keyboard shortcuts for switching tabs
+      if (e.ctrlKey) {
+        if (key === '1') { showCalculator('standard'); e.preventDefault(); }
+        if (key === '2') { showCalculator('cash'); e.preventDefault(); }
+        if (key === '3') { showCalculator('loan'); e.preventDefault(); }
+        if (key === '4') { showCalculator('convert'); e.preventDefault(); }
+        if (key === '5') { showCalculator('date'); e.preventDefault(); }
+        if (key === '6') { showCalculator('bmi'); e.preventDefault(); }
+      }
+    });
+  </script>
+</body>
+
+</html>
