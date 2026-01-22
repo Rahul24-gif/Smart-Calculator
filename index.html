@@ -31,18 +31,18 @@
     /* --- CSS VARIABLES (From your styles.css) --- */
     :root {
       /* --- LIGHT THEME (Glassmorphism) --- */
-      --bg-overlay: rgba(255, 255, 255, 0.4);
-      --glass-bg: rgba(255, 255, 255, 0.25);
-      --glass-border: rgba(255, 255, 255, 0.3);
-      --text-main: #1f2937;
-      --text-muted: #6b7280;
+      --bg-overlay: rgba(253, 253, 253, 0.986);
+      --glass-bg: rgba(233, 233, 233, 0.897);
+      --glass-border: rgba(0, 0, 0, 0.288);
+      --text-main: #000000;
+      --text-muted: #91a2c0;
       --primary-grad: linear-gradient(135deg, #4f46e5, #3b82f6);
       --primary-glow: rgba(79, 70, 229, 0.4);
       --secondary-grad: linear-gradient(135deg, #ec4899, #db2777);
-      --btn-bg: rgba(255, 255, 255, 0.3);
+      --btn-bg: rgba(233, 233, 233, 0.897);
       --btn-hover: rgba(255, 255, 255, 0.5);
-      --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
-      --display-bg: rgba(255, 255, 255, 0.15);
+      --shadow: 0 8px 32px 0 rgba(7, 23, 245, 0.1);
+      --display-bg: rgba(233, 233, 233, 0.959);
       /* Reduced Dimensions for Compact Fit */
       --container-padding: 20px;
       --btn-padding: 12px;
@@ -715,7 +715,7 @@
     .cash-input-total input {
       flex: 1;
       /* Ensure at least 9 digits fit comfortably */
-      min-width: 100px;
+      min-width: 130px;
       /* Input styling inherits global */
     }
 
@@ -783,9 +783,9 @@
       justify-content: center;
       align-items: center;
       text-align: center;
-      font-size: 1.2rem;
+      font-size: 1.8rem;
       font-weight: 700;
-      padding: 8px;
+      padding: 13px;
       margin: 6px 0;
       /* Reduced margin/padding */
       background: var(--primary-grad);
@@ -805,7 +805,7 @@
 
     .cash-actions button {
       flex: 1;
-      padding: 8px;
+      padding: 13px;
       border: none;
       border-radius: 8px;
       color: white;
@@ -815,7 +815,7 @@
       align-items: center;
       justify-content: center;
       gap: 4px;
-      font-size: 0.85rem;
+      font-size: 1.2rem;
     }
 
     .cash-actions button:nth-child(1) {
@@ -1290,7 +1290,7 @@
             <div class="cash-row">
               <label for="coins"><i class="fas fa-coins"></i> Coins</label>
               <div class="cash-input-total">
-                <input type="number" id="coins" placeholder="Total"
+                <input type="number" id="coins" placeholder="Count"
                   oninput="validateCashInput(this); updateCashTotal();">
                 <span id="tcoins" class="note-total">₹0</span>
               </div>
